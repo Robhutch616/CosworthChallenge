@@ -1,0 +1,309 @@
+\documentclass{article}
+\usepackage{comment}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage[margin=0.81 in]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{cite}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{epstopdf} % dont know 
+\usepackage{lscape} % dont know
+\usepackage{longtable} % dont know
+\usepackage{braket} % dont know
+\usepackage[T1]{fontenc} % dont know
+\usepackage{pdflscape} % dont know
+%\def\changemargin#1#2{\list{}{\rightmargin#2\leftmargin#1}\item[]}
+%\let\endchangemargin=\endlist 
+
+\usepackage{scrextend}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\usepackage[T1]{fontenc}
+\usepackage{inconsolata}
+
+\usepackage{color}
+
+\definecolor{pblue}{rgb}{0.13,0.13,1}
+\definecolor{pgreen}{rgb}{0,0.5,0}
+\definecolor{pred}{rgb}{0.9,0,0}
+\definecolor{pgrey}{rgb}{0.46,0.45,0.48}
+
+\usepackage{listings}
+\lstset{language=Java,
+	showspaces=false,
+	showtabs=false,
+	breaklines=true,
+	showstringspaces=false,
+	breakatwhitespace=true,
+	commentstyle=\color{pgreen},
+	keywordstyle=\color{pblue},
+	stringstyle=\color{pred},
+	basicstyle=\ttfamily,
+	moredelim=[il][\textcolor{pgrey}]{\$\$}, % $$
+	moredelim=[is][\textcolor{pgrey}]{\%\%}{\%\%}
+}
+\usepackage{hyperref}
+\let\TAB\tabular
+\renewcommand\tabular{\noindent\TAB}   
+
+\usepackage{array}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{S}{>{\centering\arraybackslash}m{2cm}}
+\newcolumntype{I}{>{\centering\arraybackslash}m{2.5cm}}
+\newcolumntype{M}{>{\centering\arraybackslash}m{3cm}}
+\newcolumntype{L}{>{\centering\arraybackslash}m{4cm}}
+\newcolumntype{F}{>{\centering\arraybackslash}m{10cm}}
+\newcolumntype{W}{>{\raggedleft\arraybackslash}m{2.5cm}}
+\newcolumntype{E}{>{\centering\arraybackslash}m{6cm}}
+\newcolumntype{Y}{>{\raggedleft\arraybackslash}m{7cm}}
+\newcolumntype{y}{>{\raggedleft\arraybackslash}m{0.5\textwidth}}
+\newcolumntype{u}{>{\centering\arraybackslash}m{0.2\textwidth}}
+
+\newcommand{\specialcell}[2][c]{%
+	\begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+\usepackage{mathrsfs}
+
+%\usepackage{setspace}\doublespacing
+\usepackage{titlesec}
+
+% % % Packages for the appendix % % % %
+\usepackage[titletoc,toc,title]{appendix}
+
+\begin{document}
+	\begin{center}
+		{\color{white}{space}}\vspace{- 2 cm}\\
+		\line(1,0){450}\\
+		\Large{\textbf{Cosworth Electronics Challenge\\}}
+		\large{Robert Hutchinson}
+		%\normalsize{ 59 Port Arthur Road, Sneinton, Nottingham, NG2 4GD\\Email: Robert.hutchinson.work@gmail.com\\Contact Number: +44 7812520981\\}
+		
+		\normalsize{Email: Robert.hutchinson.work@gmail.com\\Contact Number: +44 7812520981\\
+		}
+		\line(1,0){450}\\
+	\end{center}
+	\part{Restating the problem}
+	\begin{itemize}
+		\item $32$-bit \texttt{int} data is captured from channels $C$ at frequencies $f$
+		\begin{equation}\label{f_range}
+		C = C(f)	f \in \{1,2,5,10,20,50,100,200,500,1000\} Hz
+		\end{equation}
+		\item multiple channels per frequency
+		\item Loggers read out data in tick intervals, with 1000 ticks ($t$) every second.
+		\begin{equation}\label{t_range}
+		t \in \{0:999\}
+		\end{equation}
+		\item Data is read out on each tick for channel $C$ under the following condition, where $n$ is any integer.
+		\begin{equation}\label{ticker}
+		t = \frac{n}{f}*1000
+		\end{equation}
+	\end{itemize}
+	
+	\part{The Algorithm}
+	\begin{itemize}
+		\item From equation~\ref{ticker} one can calculate which ticks $t$ in every second will contain data from a channel given a certain frequency, where $t = 1000 \rightarrow 0$.
+		\item If more than one channel has a data read out on the same ticker, the algorithm should expect data to come from channels with decreasing frequency and if they have the same frequency, ascending channel identifier.
+		\item Channel numbers are not required in the logged data because, given a huge array of \texttt{int} data, simply knowing the frequency, start time and channel id of the channels, one get deduce which rows of the array correspond to which types of data.
+	\end{itemize}
+	\section{Board Description}
+ Broadly speaking the method of this algorithm is as follows.
+		\begin{enumerate}
+			\item The input is a set of \texttt{channels}, which contain a number a \texttt{channel\_id} and \texttt{frequency} and a huge array of \texttt{int} data with a start time.
+			\item Group the given channels into \emph{sets} which have the same frequency, and order those channels in each set by ascending \texttt{channel\_id}.
+			\item Calculate the tick numbers $t$ that trigger each \emph{set}.
+			\item Calculate the offset between the block start time \& the ticker number of the first element in the block. This is needed because the blocks won't necessarily, and probably don't start on the second.
+			\item By this point you know which ticks will result in data being recorded, and for each tick that results in data being recorded, how many bits of data are expected.
+			\item From this one can generate a pattern of \texttt{channel\_id} that is written to, and the time in milliseconds of that value.
+			\item iterate over the data in the block and assign each row, a \texttt{channel\_id} and a \texttt{time} in milliseconds of the event. Then fill \emph{channel sets} accordingly with that data.
+			\item Using this algorithm, one can order data from any number of blocks, even in the blocks overlap in time. You just need to order the time series data after you have them in \emph{channel sets}, then graph it.	
+		\end{enumerate} 
+	\section{More Detailed Description}
+	This section gives more details about the algorithm along with snippets of code in Java. I will send a github link to all code. \\{\color{red}Disclaimer : I don't have time to check that the code actually works for 2 reasons. Firstly, I wrote this all in VS code which doesn't compile projects (I'm working on a laptop that doesn't have eclipse and I didn't want to use time getting it setup). Secondly, it would require generating a dummy dataset to work on. I think this is probably outside the scope of the exercise. I also realised a little too late that my settings on \LaTeX\ lstlistings makes java code look aweful. I will append the code to the end of the pdf.}
+	\begin{itemize}
+		\item For the sake of completeness, if you are looking at the project code on Github. The main function is in \texttt{CosworthCode}.
+		\item I've tried to comment the code as much as necessary so that you understand my logic.
+		\item using separation of concerns there are a bunch of classes that simple handle passing data around and are not that interesting. The main classes that actually do stuff include:
+		\begin{itemize}
+			\item \texttt{LoggingAlgorithm.java}
+			\item \texttt{Pattern.java}
+			\item \texttt{ChannelSet.java}
+		\end{itemize}
+		\item In \texttt{LoggingAlgoirthm.java} the constructor simple generate some dummy channels and frequencies. The interesting part starts in \texttt{runAlgorithm()}.
+		\begin{lstlisting}
+		public void runAlgorithm(){
+		// Take the given set of channels that contain channelId and frequency and group them accordingly
+		sortChannelsIntoFrequencySets(channels, frequencySet);
+		// Calculate which ticks will fire the frequencySets
+		calculateTickValuesForCollections(frequencySet);
+		// Order the frequencySets in descending order
+		frequencySet = reOrderFrequencySetsInDescendingOrder(frequencySet);
+		// Now that the sets are ordered in descending order and we know which ticker values will fire each frequency set
+		// One can now calcualte a recurring pattern of channelIds that will be fired each second.
+		algPattern = calculateRecurrsiveTickPatternInData(frequencySet);
+		// ASSUMPTION = I will assume that the total number of channels in the complete system have 
+		//          channelIds that are always consequtive and in ascending order from 0.
+		//          If this wasn't the case I would be tempted to make a HashMap<Integer, ChannelData>
+		// Where Integer would be the channelData channelId
+		for(Block block : blockList){
+		sortDataFromSingleBlock(block, orderedData, algPattern);
+		}
+		// DONE!
+		}
+		\end{lstlisting}
+		\item \texttt{sortChannelsIntoFrequencySets()} does a simple enough job and groups together the provided list of \texttt{Channel} into groups depending on their \texttt{frequency}.
+		\item \texttt{calculateTickValuesForCollections(frequencySet)} then calculates the tick values which will fire data being logged for this frequency set. The tick numbers are actually calculated in the \texttt{ChannelSet} class after the sets are re-ordered in \emph{ascending channel identifier}, according to equation~\ref{ticker}.
+		\item \texttt{reOrderFrequenceSetsInDecendingOrder(List<ChannelSet>)} - this is a simple sort algorithm to order the frequency sets in decending order.
+		\item \texttt{calculateRecurrsiveTickPatternInData(frequencySet)} - This is where it gets interesting. The idea is to create a pattern that occurs every second in the data which contains information on which channels are fired in what order.
+		\begin{lstlisting}
+		private Pattern calculateRecurrsiveTickPatternInData(List<ChannelSet> sets){
+		Pattern pattern = new Pattern();
+		// loop over all ticks in a second
+		for(int t=0; t<SECOND ; t++){
+		// First look in each frequencyset and check if t appears in the tick array
+		for(ChannelSet set : sets){
+		if(!set.doesTickAppearInThisSet(t)){
+		// if current tick does not appear in the channelSet then move to next channelSet
+		continue;
+		}
+		// channelSet 'set' will read out on this tick value
+		// Therefore fill pattern with tick and channel values in ascending order over channelSet
+		for(Channel ch : set.getChannelList()){
+		// The Channel list will be in ascending order so simple read off the channelIds
+		pattern.add(new TickPattern(t, ch.getChannelId()));
+		}
+		}
+		}
+		// Pattern contains recurrsive list over a second
+		return pattern;
+		}
+		\end{lstlisting}
+		\begin{itemize}
+			\item \texttt{Pattern} contains a list of objects that describe the \texttt{channelId} that was fired, and which \texttt{tick} fired it.
+			\item looping over all ticks in a second (0 - 999), for each second one has to calculate whether the tick will trigger a read out in descending frequencies. 
+			\item If the \texttt{tick} will cause a readout then simple iterate over the channels in that frequency set and add them to the pattern.
+			\item As the lists are already ordered you simple need to read out the channels that will be fired by each tick in the second.
+		\end{itemize}
+	\item After this is done, one just needs to iterate over the number of block they have and order the data into sets that are characterised by their \texttt{channelId}. This is done here:
+	\begin{lstlisting}
+	for(Block block : blockList){
+	sortDataFromSingleBlock(block, orderedData, algPattern);
+	}
+	
+	/**
+	* This sorts out data for one block and adds the data to the orderedData list
+	*/
+	private void sortDataFromSingleBlock(Block block, List<ChannelData> data, Pattern pattern){
+	// Calculate offset of block in a second
+	final long blockStartTime = block.getStart();
+	// Find the index of the first tick that will be present in the data block
+	pattern.setStartIndex(blockStartTime);
+	// Now interate over all data in the block
+	for(int i=0 ; i<block.getLength();i++){
+	// Get information needed for current index
+	ChannelTime channelTime = pattern.getInfoForCurrentIndex();
+	// Add the data to the ordered sets - NOTE - THIS IS WHERE I USE THE ASSUMPTION ABOUT CONTINUOUS DATA
+	ChannelData channelData = orderedData.get(channelTime.getChannelId());
+	channelData.addDataToChannel(new DataPoint(block.getDataAtIndex(i), channelTime.getTime()));
+	//Increment index of pattern array
+	pattern.incrementIndex();
+	}
+	}
+	\end{lstlisting}
+		\begin{itemize}
+			\item Now because the start time of the block can occur any time in the second, we need to work out how far down the recurrent pattern we are in the beginning of the block.
+			\begin{lstlisting}
+			public void setStartIndex(long blockStartTime){
+			// number of milli seconds into second that the block began
+			int offset = blockStartTime % 1000; 
+			nearestSecondToBlockStartTime = blockStartTime - (long)offset;
+			//Calculate the number of positions left in the second before the pattern recurs
+			// This is the number milliseconds left in the first non-complete second
+			this.index = findIndexOfNearestTickToOffset(offset);        
+			}
+			
+			/**
+			* Function to find the nearest tick to the offset provided by the block start time.
+			*/
+			private int findIndexOfNearestTickToOffset(int offset){
+			// pattern size should be fixed at this point
+			this.finalPatternSize = pattern.size();
+			for(int k=0; k < finalPatternSize ; k++ ){
+			TickPattern tickPattern = pattern.get(k);
+			if(tickPattern.getTick() >= offset){
+			// Return the index as soon as the tick in the pattern is greater than 
+			//or equal to the offset provided by the block start time.
+			return k;
+			}
+			}
+			// If this function has not returned a value by this point it means that the offset in the second
+			// was higher than any of the ticks in the pattern. If this is the case than the next data point
+			// will be from the next second at tick t=0.
+			return 0;
+			}
+			\end{lstlisting}			
+			\item The nearest second is saved because this is used later to calculate the raw time of each data point. This is stored as a \texttt{long} number milliseconds since the data logger started. If one knew this start time in global time system then one can work out the exact time of each data point. However I should probably note that this accuracy may tail off if left for a long time, depending on the ticker accuracy. When I was working with bluetooth data I had this problem whereby the data was given nanosecond timestamps which lost accuracy as you chained them together. Basically one could say to a fair degree of accuracy that successive values where 70 ish nanoseconds apart but once you compared values that were seconds apart without another reference, time started to drift.
+			\item The \texttt{pattern} \texttt{index} is incremented inside the pattern class using the below code. This recorded the number of full seconds that elapsed whilst iterating through this pattern.
+			\begin{lstlisting}
+			  public incrementIndex(){
+			this.index++;
+			if(this.index == finalPatternSize){
+			this.index = 0;
+			//every time it ticks over add a full second on to counter above
+			this.numberOfSecondsElapsedFromStartTime++;
+			}
+			}
+			\end{lstlisting}
+			\item The \texttt{channelId} and data \texttt{time} is read off from the \texttt{pattern} using the below functions and this is past back to the \texttt{LoggingAlgorithm}.
+			\begin{lstlisting}
+			private long calculateTimeOfDataPoint(int tickValue){
+			return nearestSecondToBlockStartTime + (numberOfSecondsElapsedFromStartTime * 1000) + tickValue;
+			}
+			
+			public ChannelTime getInfoForCurrentIndex(){
+			TickPattern tickPattern = pattern.get(index);
+			return new ChannelTime(tickPattern.getChannelId(), calculateTimeOfDataPoint(tickPattern.getTick()));
+			}
+			\end{lstlisting}
+			\item The \texttt{channelId}, \texttt{time} and \texttt{value} of the data point is then added to the \texttt{orderedData}.
+			\begin{lstlisting}
+			ChannelData channelData = orderedData.get(channelTime.getChannelId());
+			channelData.addDataToChannel(new DataPoint(block.getDataAtIndex(i), channelTime.getTime()));
+			//Increment index of pattern array
+			pattern.incrementIndex();
+			\end{lstlisting}
+			\item \emph{An assumption is used here} I assume that the \emph{channelId} will be in ascending order and continuous. This is so I get use the \texttt{channelId} as the index for \texttt{orderedData}.
+			\item If this wasn't the case, I would be tempted to use a Hashmap, but there are probably better ways.
+			\begin{lstlisting}
+			HashMap<Integer, ChannelData> hashmapData
+			\end{lstlisting}
+			
+			
+		\end{itemize}
+		
+		
+	\end{itemize}
+
+	
+	\part{General Questions}
+	\begin{enumerate}
+		\item \textbf{What are the advantages of using an interleaved data format on a data logger ?}\\
+		Mainly speed of data storage. To store the data in a more logical or human readable format would require constant computation, working out which data belonged in which column. By quickly storing all data in its raw form, yet in an organised way it allows you to quickly group the data for post processing. This saves time \& money, in terms of cost of components since the data loggers don't need to do any expensive computation.
+		\item \textbf{How would you test the decoding algorithms that you have designed ?}\\
+		I would do this in two ways.
+		\begin{enumerate}
+			\item Generate unit tests for each function so that I'm sure that each function is generating the correct output given dummy inputs.
+			\item Then generate a test sample, a number of data blocks that I know to be correct, and with it a collection of data that is ordered. Generating the data shouldn't be as difficult as organising it. Then feed the data in backwards and check the results.
+		\end{enumerate} 
+	\item \textbf{If you were to implement an application to do the above and to read the data over Ethernet, how would you structure the application to ensure maximum throughput at the times ?}\\
+	TODO 
+	\end{enumerate}
+\end{document}
+
+
